@@ -1,0 +1,816 @@
+Battleship.java:
+---------------
+public class Battleship extends ConsoleProgram
+{
+    private Player p1;
+    private Player p2;
+    
+    public void run()
+    {
+        boolean gameOver = false;
+        boolean p1Turn = true;
+        
+        p1 = new Player();
+        p2 = new Player();
+        
+        p1.printMyShips();
+        
+        setUpPlayerShips();
+        setUpComputerShips();
+        
+        
+        System.out.println("BATTLESHIP BEGINS");
+        
+        while (!gameOver){
+            if (p1Turn){
+                System.out.println("PLAYER 1'S TURN");
+                
+                askForGuess(p1,p2);
+                
+                if (p2.allShipsSunk()){
+                    System.out.println("PLAYER 1 WINS");
+                    gameOver = true;
+                }
+            }else{
+                System.out.println("PLAYER 2'S TURN");
+                askForGuess(p2,p1);
+                if (p1.allShipsSunk()){
+                    System.out.println("PLAYER 2 WINS");
+                    gameOver = true;
+                }
+                
+            }
+            p1Turn = !p1Turn;
+        }
+        
+        System.out.println("GAME OVER");
+    }
+    
+    private void askForGuess(Player current, Player opp){
+        int row = readInt("Choose target row (0,9): ");
+        int col = readInt("Choose target col (0,9): ");
+        
+        System.out.println("Firing at coordinates (" + row + ", " + col + ")...");
+        
+        boolean hit = opp.recordOpponentGuess(row,col);
+        
+        if (hit){
+            System.out.println("Direct hit!");
+        }else{
+            System.out.println("Missed! Good luck next time");
+        }
+        current.recordMyGuess(row,col,hit);
+    }
+    
+    private boolean shipFits(Ship s, int row, int col, int direction){
+        if (direction == 0){ //horizontal
+            return col + s.getLength() <= 10;
+        }else{
+            return row + s.getLength() <= 10;
+        }
+    }
+    
+    private void setUpPlayerShips(){
+        Ship[] ships = p1.getShips();
+        
+        for (int i = 0; i < ships.length; i++){
+            Ship s = ships[i];
+            
+            System.out.println("Place ship of length " + s.getLength());
+            
+            int row = readInt("Row: ");
+            int col = readInt("Col: ");
+            int direction = readInt("H = 0, V = 1: ");
+            
+            while (!shipFits(s,row,col,direction)){
+                System.out.println("Ship does not fit!");
+                
+                row = readInt("Row: ");
+                col = readInt("Col: ");
+                direction = readInt("H = 0, V = 1: ");
+            }
+            p1.chooseShipLocation(s,row,col,direction);
+            p1.printMyShips();
+        }
+    }
+    
+    private void setUpComputerShips(){
+        Ship[] ships = p2.getShips();
+        
+        for (int i = 0; i < ships.length; i++){
+            Ship s = ships[i];
+            
+            int row = Randomizer.nextInt(0,9);
+            int col = Randomizer.nextInt(0,9);
+            int direction = Randomizer.nextInt(0,1);
+            
+            while (!shipFits(s,row,col,direction)){
+                row = Randomizer.nextInt(0,9);
+                col = Randomizer.nextInt(0,9);
+                direction = Randomizer.nextInt(0,1);
+            }
+            p2.chooseShipLocation(s,row,col,direction);
+        }
+    }
+}
+
+Grid.java:
+---------
+public class Grid
+{
+    // Write your Grid class here
+    private Location[][] grid;
+    
+    public static final int NUM_ROWS = 10;
+    public static final int NUM_COLS = 10;
+    
+    public Grid(){
+        grid = new Location [NUM_ROWS][NUM_COLS];
+        for (int r = 0; r < NUM_ROWS; r++){
+            for (int c = 0; c < NUM_COLS; c++){
+                grid[r][c] = new Location();
+            }
+        }
+    }
+    
+    public void markHit(int row, int col){
+        grid[row][col].markHit();
+    }
+    
+    public void markMiss(int row, int col){
+        grid[row][col].markMiss();
+        
+    }
+    
+    public void setStatus(int row, int col, int status){
+        grid[row][col].setStatus(status);
+    }
+    
+    public int getStatus(int row, int col){
+        return grid[row][col].getStatus();
+    }
+    
+    public boolean alreadyGuessed(int row, int col){
+        if (grid[row][col].isUnguessed() == true){
+            return false;
+        }else{
+            return true;
+        }
+    }
+    public void setShip(int row, int col, boolean val){
+        grid[row][col].setShip(val);
+    }
+    
+    public boolean hasShip(int row, int col){
+        return grid[row][col].hasShip();
+    }
+    
+    public Location get(int row, int col){
+        return grid[row][col];
+    }
+    
+    public int numRows(){
+        return grid.length;
+    }
+    
+    public int numCols(){
+        return grid[0].length;
+    }
+    
+    public void printStatus(){
+        for (int c = 1; c <= NUM_COLS; c++){
+            System.out.print(" " + c);
+        }
+        System.out.println();
+        
+        String l = "ABCDEFGHIJ";
+        
+        for (int r = 0; r < NUM_ROWS; r++){
+            System.out.print(l.substring(r, r + 1) + " ");
+            for (int c = 0; c < NUM_COLS; c++){
+                int status = getStatus(r,c);
+                
+                if (status == 1){
+                    System.out.print("X ");
+                }else if (status == 2){
+                    System.out.print("O ");
+                }else{
+                    System.out.print("- ");
+                }
+            }
+            System.out.println();
+        }
+    }
+    
+    public void printShips(){
+                System.out.print(" ");
+        for (int c = 1; c <= NUM_COLS; c++){
+            System.out.print(c + " ");
+        }
+        System.out.println();
+        
+        String l = "ABCDEFGHIJ";
+        
+        for (int r = 0; r < NUM_ROWS; r++){
+            System.out.print(l.substring(r, r + 1) + " ");
+            for (int c = 0; c < NUM_COLS; c++){
+                
+                if (hasShip(r,c)){
+                    System.out.print("X ");
+                }else{
+                    System.out.print("- ");
+                }
+            }
+            System.out.println();
+        }
+    }
+    
+    public void addShip(Ship s){
+        for (int i = 0; i < s.getLength(); i++){
+            if (s.getDirection() == 1 ){ //if vertical
+                get(s.getRow() + i, s.getCol()).setShip(true);
+            }else if (s.getDirection() == 0){ //if horizontal
+                get(s.getRow(), s.getCol() + i).setShip(true);
+            }
+        }
+    }
+}
+
+Location.java:
+-------------
+public class Location
+{
+    //Implement the Location class here
+    private boolean isShipAtLoc;
+    private int status;
+    
+    public static final int UNGUESSED = 0;
+    public static final int HIT = 1;
+    public static final int MISSED = 2;
+    
+    public Location(){
+        status = UNGUESSED;
+        isShipAtLoc = false;
+    }
+    
+    public boolean checkHit(){
+        if (status == HIT){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public boolean checkMiss(){
+        if (status == MISSED){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public boolean isUnguessed(){
+        if (status == UNGUESSED){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public void markHit(){
+        status = HIT;
+    }
+    
+    public void markMiss(){
+        status = MISSED;
+    }
+    
+    public boolean hasShip(){
+        if (isShipAtLoc == true){
+            return true;
+        }else{
+            return false;
+        }
+    }
+    
+    public void setShip(boolean val){
+        isShipAtLoc = val;
+    }
+    
+    public void setStatus(int status){
+        this.status = status;
+    }
+    
+    public int getStatus(){
+        return status;
+    }
+}
+
+Player.java:
+-----------
+public class Player
+{
+    // Write your Player class here
+    private static final int[] SHIP_LENGTHS = {2,3,3,4,5};
+    
+    private Grid gridOne;
+    private Grid gridTwo;
+    private Ship[] ship;
+    
+    private int shipsPlaced;
+    
+    public Player(){
+        ship = new Ship[SHIP_LENGTHS.length];
+        gridOne = new Grid();
+        gridTwo = new Grid();
+        
+        shipsPlaced = 0;
+        
+        for (int i = 0; i < SHIP_LENGTHS.length; i++){
+            ship[i] = new Ship(SHIP_LENGTHS[i]);
+        }
+    }
+    
+    public void chooseShipLocation(Ship s, int row, int col, int direction){
+        if (shipsPlaced < SHIP_LENGTHS.length){
+            s.setLocation(row,col);
+            s.setDirection(direction);
+            
+            gridOne.addShip(s);
+            
+            shipsPlaced++;
+        }
+    }
+    
+    public void printMyShips(){
+        gridOne.printShips();
+    }
+    
+    public void printOpponentGuesses(){
+        gridOne.printStatus();
+    }
+    
+    public void printMyGuesses(){
+        gridTwo.printStatus();
+    }
+    
+    public boolean recordOpponentGuess(int row, int col){
+        if (gridOne.hasShip(row,col)){
+            gridOne.markHit(row,col);
+            return true;
+        }else{
+            gridOne.markMiss(row,col);
+            return false;
+        }
+    }
+    
+    public void recordMyGuess(int row, int col, boolean hit){
+        if (hit){
+            gridTwo.markHit(row, col);
+        }else{
+            gridTwo.markMiss(row,col);
+        }
+    }
+    
+    public boolean allShipsSunk(){
+        for (int r = 0; r < gridOne.numRows(); r++){
+            for (int c = 0; c < gridOne.numCols(); c++){
+                if (gridOne.hasShip(r,c) && gridOne.get(r,c).checkHit() == false){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    public Ship[] getShips(){
+        return ship;
+    }
+}
+
+Randomizer.java:
+---------------
+import java.util.*;
+
+public class Randomizer{
+
+	public static Random theInstance = null;
+	
+	public Randomizer(){
+		
+	}
+	
+	public static Random getInstance(){
+		if(theInstance == null){
+			theInstance = new Random();
+		}
+		return theInstance;
+	}
+	
+	/**
+	 * Return a random boolean value.
+	 * @return True or false value simulating a coin flip.
+	 */
+	public static boolean nextBoolean(){
+		return Randomizer.getInstance().nextBoolean();
+	}
+
+	/**
+	 * This method simulates a weighted coin flip which will return
+	 * true with the probability passed as a parameter.
+	 * 
+	 * @param	probability	The probability that the method returns true, a value between 0 to 1 inclusive. 
+	 * @return True or false value simulating a weighted coin flip.
+	 */
+	public static boolean nextBoolean(double probability){
+		return Randomizer.nextDouble() < probability;
+	}
+	
+	/**
+	 * This method returns a random integer.
+	 * @return A random integer.
+	 */
+	public static int nextInt(){
+		return Randomizer.getInstance().nextInt();
+	}
+
+	/**
+	 * This method returns a random integer between 0 and n, exclusive.
+	 * @param n	The maximum value for the range.
+	 * @return A random integer between 0 and n, exclusive.
+	 */
+	public static int nextInt(int n){
+		return Randomizer.getInstance().nextInt(n);
+	}
+
+	/**
+	 * Return a number between min and max, inclusive.
+	 * @param min	The minimum integer value of the range, inclusive.
+	 * @param max	The maximum integer value in the range, inclusive.
+	 * @return A random integer between min and max.
+	 */
+	public static int nextInt(int min, int max){
+		return min + Randomizer.nextInt(max - min + 1);
+	}
+
+	/**
+	 * Return a random double between 0 and 1.
+	 * @return A random double between 0 and 1.
+	 */
+	public static double nextDouble(){
+		return Randomizer.getInstance().nextDouble();
+	}
+
+	/**
+	 * Return a random double between min and max.
+	 * @param min The minimum double value in the range.
+	 * @param max The maximum double value in the rang.
+	 * @return A random double between min and max.
+	 */
+	public static double nextDouble(double min, double max){
+		return min + (max - min) * Randomizer.nextDouble();
+	}
+
+	
+}
+
+Ship.java:
+---------
+public class Ship
+{
+    // Copy your ship class from Part 1.
+    private int row;
+    private int col;
+    private int length;
+    private int direction;
+    
+    private static final int UNSET = -1;
+    private static final int HORIZONTAL = 0;
+    private static final int VERTICAL = 1;
+    
+    public Ship(int length){
+        this.length = length;
+        direction = UNSET;
+        row = UNSET;
+        col = UNSET;
+        
+    }
+    
+    public boolean isLocationSet(){
+        if (row == UNSET && col == UNSET){
+            return false;
+        }else{
+            return true;
+        }
+    }
+    
+    public boolean isDirectionSet(){
+        if (direction == UNSET){
+            return false;
+        }else{
+            return true;
+        }
+    }
+    
+    public void setLocation(int row, int col){
+        this.row = row;
+        this.col = col;
+    }
+    
+    public void setDirection(int direction){
+        this.direction = direction;
+    }
+    
+    public int getRow(){
+        return row;
+    }
+    
+    public int getCol(){
+        return col;
+    }
+    
+    public int getLength(){
+        return length;
+    }
+    
+    public int getDirection(){
+        return direction;
+    }
+    
+    private String directionToString(){
+        if (direction == VERTICAL){
+            return "vertical ship ";
+        }else if (direction == HORIZONTAL){
+            return "horizontal ship ";
+        }else{
+            return "unset direction ship ";
+        }
+    }
+    
+    private String locationToString(){
+        if (row != UNSET && col != UNSET){
+            return "(" + row + ", " + col + ")";
+        }else{
+            return "(unset location)";
+        }
+    }
+    
+    public String toString(){
+        return directionToString() + "of length " + length + " at " + locationToString();
+    }
+}
+
+ConsoleProgram.java:
+----
+import java.util.*;
+
+public class ConsoleProgram{
+
+    private Scanner scanner;
+    private ArrayList<String> inputs;
+    private int curInputIndex = 0;
+
+    public static void main(String[] args){
+        // Assume the class name is passed in as the first argument.
+
+        if(args.length == 0){
+            System.out.println("Please provide the name of the main class as an argument.");
+            return;
+        }
+
+        String mainClassName = args[0];
+
+        try{
+            Class mainClass = Class.forName(mainClassName);
+            Object obj = mainClass.newInstance();
+            ConsoleProgram program = (ConsoleProgram)obj;
+            program.run();
+        } catch (IllegalAccessException ex) {
+            System.out.println("Error in program. Make sure you extend ConsoleProgram");
+        } catch (InstantiationException ex) {
+            System.out.println("Error in program. Make sure you extend ConsoleProgram");
+        } catch (ClassNotFoundException ex) {
+            System.out.println("Error in program. Make sure you extend ConsoleProgram");
+        }
+    }
+
+    public void run(){
+        /* Overridden by subclass */
+    }
+
+    public ConsoleProgram(){
+        scanner = new Scanner(System.in);
+
+    }
+
+    /**
+     * Allows you to set all inputs at once as strings.
+     * @param inputStrings Array of strings to be inputs
+     */
+    public void setInputs(String[] inputStrings)
+    {
+        inputs = new ArrayList<String>(Arrays.asList(inputStrings));
+    }
+
+    /**
+     * Allows you to add an input to your inputs.
+     * @param s String to add
+     */
+    public void addInput(String s)
+    {
+        if (inputs == null)
+        {
+            inputs = new ArrayList<String>();
+        }
+        inputs.add(s);
+    }
+
+    public String readLine(String prompt){
+        System.out.print(prompt);
+        return scanner.nextLine();
+    }
+
+    public boolean readBoolean(String prompt){
+
+        while(true){
+            String input = readLine(prompt);
+
+            if(input.equalsIgnoreCase("true")){
+                return true;
+            }
+
+            if(input.equalsIgnoreCase("false")){
+                return false;
+            }
+        }
+    }
+
+    public double readDouble(String prompt){
+
+        while(true){
+            String input = readLine(prompt);
+            try {
+                double n = Double.valueOf(input).doubleValue();
+                return n;
+            } catch (NumberFormatException e){
+
+            }
+        }
+    }
+
+    // Allow the user to get an integer.
+    public int readInt(String prompt){
+
+        while(true){
+            String input = readLine(prompt);
+            try {
+                int n = Integer.parseInt(input);
+                return n;
+            } catch (NumberFormatException e){
+
+            }
+        }
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println()
+     */
+    public void println() {
+        System.out.println();
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(String s)
+     */
+    public void println(String s) {
+        System.out.println(s);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(boolean x)
+     */
+    public void println(boolean x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(char x)
+     */
+    public void println(char x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(char[] x)
+     */
+    public void println(char[] x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(int x)
+     */
+    public void println(int x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(long x)
+     */
+    public void println(long x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(float x)
+     */
+    public void println(float x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(double x)
+     */
+    public void println(double x) {
+        System.out.println(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.println(Object o)
+     */
+    public void println(Object o) {
+        System.out.println(o);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print()
+     */
+    public void print() {
+        System.out.print("");
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(String s)
+     */
+    public void print(String s) {
+        System.out.print(s);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(boolean x)
+     */
+    public void print(boolean x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(char x)
+     */
+    public void print(char x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(char[] x)
+     */
+    public void print(char[] x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(int x)
+     */
+    public void print(int x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(long x)
+     */
+    public void print(long x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(float x)
+     */
+    public void print(float x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(double x)
+     */
+    public void print(double x) {
+        System.out.print(x);
+    }
+
+    /**
+     * Allows us to use a shorthand version for System.out.print(Object o)
+     */
+    public void print(Object o) {
+        System.out.print(o);
+    }
+}
+
+
